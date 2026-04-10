@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Grocery Shop - Item Locator</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto; text-align: center; }
+        .header { margin-bottom: 20px; }
+        .sub-heading { color: #555; font-size: 14px; margin-top: -10px; margin-bottom: 20px; font-style: italic; }
+        input { width: 100%; padding: 15px; font-size: 18px; margin-bottom: 10px; box-sizing: border-box; border: 2px solid #ccc; border-radius: 5px; }
+        #status { color: gray; font-size: 16px; margin-bottom: 10px; height: 20px; }
+        ul { list-style-type: none; padding: 0; text-align: left; }
+        li { padding: 15px; border-bottom: 1px solid #eee; font-size: 18px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>Local Grocery Shop - Item Locator</h2>
+        <p class="sub-heading">10th April 2026, Lab Assignment 1</p>
+    </div>
+    
+    <input type="text" id="searchInput" placeholder="Search for groceries (e.g., Milk, Bread, Apples)..." autocomplete="off" />
+    <div id="status"></div>
+    <ul id="results"></ul>
+
+    <script>
+        const searchInput = document.getElementById('searchInput');
+        const resultsContainer = document.getElementById('results');
+        const statusDiv = document.getElementById('status');
+
+        // 1. Debounce function
+        // Prevents calling the API on every single keystroke. It waits until
+        // the user has stopped typing for `delay` milliseconds.
+        function debounce(func, delay) {
+            let timeoutId;
+            return function(...args) {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => {
+                    func.apply(this, args);
+                }, delay);
+            };
+        }
+
+        // 2. AbortController
+        // Keeps track of the current request. If the user types a new letter
+        // before the previous request finishes, we cancel the old one to avoid race conditions.
+        let currentAbortController = null;
+
+        async function performSearch(query) {
+            // Clear previous results
+            statusDiv.innerHTML = '';
+            resultsContainer.innerHTML = '';
+
+            if (!query.trim()) {
+                return; // Don't search for empty spaces
+            }
+
+            statusDiv.innerHTML = 'Loading...';
+
+            if (currentAbortController) {
+                currentAbortController.abort(); // Cancel the stale request
+            }
+            currentAbortController = new AbortController();
+
+            try {
+                // Fetch from our local FastAPI backend
+                const response = await fetch(`http://localhost:8000/search?q=${encodeURIComponent(query)}`, {
+                    signal: currentAbortController.signal
+                });
+                
+                if (!response.ok) throw new Error('Failed to fetch data');
+                
+                const data = await response.json();
+                
+                statusDiv.innerHTML = ''; // Clear loading text
+
+                if (data.length === 0) {
+                    statusDiv.innerHTML = 'No results found.';
+                } else {
+                    data.forEach(item => {
+                        const li = document.createElement('li');
+                        li.textContent = `${item.name} (${item.category})`;
+                        resultsContainer.appendChild(li);
+                    });
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    console.log('Previous request aborted due to new search keystroke');
+                } else {
+                    statusDiv.innerHTML = 'Error fetching results.';
+                    console.error('Search error:', error);
+                }
+            }
+        }
+
+        // Attach debounced event listener (500ms delay) to the input field
+        searchInput.addEventListener('input', debounce((e) => {
+            performSearch(e.target.value);
+        }, 500));
+    </script>
+</body>
+</html>
