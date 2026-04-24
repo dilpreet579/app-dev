@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Editor Lab</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { font-family: sans-serif; margin: 40px; }
+        .error { color: red; font-size: 0.9em; }
+        .sysinfo { color: gray; font-size: 0.8em; }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            font-size: 1em;
+            box-sizing: border-box;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        #login-container, #editor-container { max-width: 600px; margin: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; }
+        button { cursor: pointer; padding: 5px 10px; }
+    </style>
+</head>
+<body>
+    <div id="login-container">
+        <h2>Authentication Lab Login</h2>
+        <p>Test Users: <br>
+           <b>alice</b> (Owner) <br>
+           <b>bob</b> (Editor) <br>
+           <b>charlie</b> (Viewer) <br>Password: <b>password1</b></p>
+        
+        <form id="login-form">
+            <input type="text" id="username" placeholder="Username" required>
+            <input type="password" id="password" placeholder="Password" value="password1" required>
+            <button type="submit">Log In</button>
+        </form>
+        <p id="login-error" class="error"></p>
+    </div>
+
+    <div id="editor-container" style="display: none;">
+        <div class="header">
+            <h3><span id="current-user"></span> - Role: <span id="current-role"></span></h3>
+            <button id="logout-btn">Log Out</button>
+        </div>
+        <!-- The user types here -->
+        <textarea id="document-content" rows="20" cols="80" disabled></textarea>
+        <!-- For viewing WS rejection messages -->
+        <p id="system-messages" class="sysinfo"></p>
+    </div>
+
+    <!-- Pull in Socket.io from the backend -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
