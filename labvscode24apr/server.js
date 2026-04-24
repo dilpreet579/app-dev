@@ -80,18 +80,26 @@ io.on('connection', (socket) => {
         role: userRole
     });
 
-    // Handle incoming edits (The Collaborative Part)
-    // NOTE: In a real app we'd use OT/CRDTS and send small diff/ops instead of full text, 
-    // but full text exchange avoids immense complexity for a basic lab.
-    socket.on('edit', (newContent) => {
-        // --- 5. Enforce Server-Side RBAC (Authorization) ---
+    // 5. Handling Operations (Naive OT Showcase)
+    socket.on('edit_operation', (operation) => {
         if (userRole === 'Owner' || userRole === 'Editor') {
-            // Apply edit
-            documentData.content = newContent;
+            // operation looks like: { type: 'insert', index: 5, text: 'a' }
+            // or { type: 'delete', index: 5, length: 1 }
+            
+            if (operation.type === 'insert') {
+                documentData.content = 
+                    documentData.content.slice(0, operation.index) + 
+                    operation.text + 
+                    documentData.content.slice(operation.index);
+            } else if (operation.type === 'delete') {
+                documentData.content = 
+                    documentData.content.slice(0, operation.index) + 
+                    documentData.content.slice(operation.index + operation.length);
+            }
 
-            // Broadcast to EVERYONE ELSE
-            socket.broadcast.emit('update', newContent);
-            console.log(`[EDIT] applied by ${socket.username}`);
+            // Broadcast the operation to other users
+            socket.broadcast.emit('apply_operation', operation);
+            console.log(`[OP] ${operation.type} applied by ${socket.username} at index ${operation.index}`);
         } else {
             // Rejected edit (a Viewer bypassing frontend restrictions)
             console.log(`[FORBIDDEN] ${socket.username} (Viewer) attempted to edit.`);
