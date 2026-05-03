@@ -112,5 +112,21 @@ io.on('connection', (socket) => {
     });
 });
 
+// 6. Flaky Analytics Endpoint (For fault-tolerance lab)
+app.get('/api/doc-stats', (req, res) => {
+    // Simulate flakiness: 60% chance to fail to demonstrate retries
+    if (Math.random() < 0.6) {
+        console.log('[API] /api/doc-stats -> SIMULATED 500 ERROR (Flaky Server)');
+        return res.status(500).json({ error: "Simulated Server Error" });
+    }
+    
+    console.log('[API] /api/doc-stats -> SUCCESS');
+    res.json({
+        wordCount: documentData.content.split(/\s+/).filter(w => w.length > 0).length,
+        charCount: documentData.content.length,
+        lastUpdated: new Date().toISOString()
+    });
+});
+
 const PORT = 3000;
 server.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

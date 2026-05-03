@@ -23,6 +23,10 @@
     </style>
 </head>
 <body>
+    <div id="offline-banner" style="display:none; background: #ffcc00; padding: 10px; text-align: center; font-weight: bold; margin-bottom: 20px;">
+        ⚠️ You are currently offline. Showing cached data.
+    </div>
+
     <div id="login-container">
         <h2>Authentication Lab Login</h2>
         <p>Test Users: <br>
@@ -47,6 +51,15 @@
         <textarea id="document-content" rows="20" cols="80" disabled></textarea>
         <!-- For viewing WS rejection messages -->
         <p id="system-messages" class="sysinfo"></p>
+
+        <!-- New fault-tolerant analytics section -->
+        <div id="analytics-container" style="margin-top: 20px; padding: 15px; border: 1px solid #ddd; background: #f9f9f9;">
+            <h4 style="margin-top: 0;">Document Analytics (Fault-Tolerant Mock)</h4>
+            <p id="stats-output" style="font-weight: bold; color: blue;">Loading stats...</p>
+            <button id="fetch-stats-1">Component A: Sync Stats</button>
+            <button id="fetch-stats-2">Component B: Sync Stats</button>
+            <p class="sysinfo">Click both buttons quickly to test Deduplication. Watch the console or server logs for Retries.</p>
+        </div>
     </div>
 
     <!-- Pull in Socket.io from the backend -->

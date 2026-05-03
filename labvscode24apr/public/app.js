@@ -7,6 +7,119 @@ document.addEventListener('DOMContentLoaded', () => {
     const textArea = document.getElementById('document-content');
     const sysMessages = document.getElementById('system-messages');
     
+    const statsOutput = document.getElementById('stats-output');
+    const offlineBanner = document.getElementById('offline-banner');
+
+    // --- FAULT-TOLERANT DATA FETCHING LAB ---
+    
+    // 1. Request Deduplication Map
+    const inFlightRequests = new Map();
+    
+    // 2. Robust Fetch Wrapper (Backoff, Retries, Deduplication, Cache)
+    async function robustFetch(url, options = {}, maxRetries = 3, initialDelay = 1000) {
+        // Prevent duplicate requests (if URL is already being fetched, return the existing Promise)
+        const cacheKey = url;
+        if (inFlightRequests.has(cacheKey)) {
+            console.log(`[DEDUPLICATION] Joining existing flight pattern for: ${url}`);
+            return inFlightRequests.get(cacheKey);
+        }
+
+        const fetchPromise = (async () => {
+            let attempt = 0;
+            let currentDelay = initialDelay;
+
+            while (attempt <= maxRetries) {
+                try {
+                    // Check if browser says we are mathematically offline
+                    if (!navigator.onLine) throw new Error("Browser is offline");
+
+                    console.log(`[NETWORK] Attempting to fetch ${url} (Attempt ${attempt + 1})`);
+                    const response = await fetch(url, options);
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP Error Status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    
+                    // 3. Ensure Data Consistency - Save good pulls to Offline Cache
+                    localStorage.setItem(`cache_${cacheKey}`, JSON.stringify(data));
+                    return data;
+
+                } catch (error) {
+                    console.warn(`[FAILED] Attempt ${attempt + 1} failed: ${error.message}`);
+                    
+                    if (attempt >= maxRetries || !navigator.onLine) {
+                        console.error(`[FALLBACK] Max retries hit or completely offline. Checking Cache...`);
+                        const cachedObj = localStorage.getItem(`cache_${cacheKey}`);
+                        if (cachedObj) {
+                            console.log(`[FALLBACK] Loading stale data from cache.`);
+                            return JSON.parse(cachedObj);
+                        }
+                        throw error;
+                    }
+
+                    // 4. Exponential Backoff (Wait longer each failure)
+                    console.log(`[BACKOFF] Waiting ${currentDelay}ms before retry...`);
+                    await new Promise(resolve => setTimeout(resolve, currentDelay));
+                    currentDelay *= 2; 
+                    attempt++;
+                }
+            }
+        })();
+
+        inFlightRequests.set(cacheKey, fetchPromise);
+        
+        // Final Cleanup
+        try {
+            const result = await fetchPromise;
+            inFlightRequests.delete(cacheKey);
+            return result;
+        } catch (e) {
+            inFlightRequests.delete(cacheKey);
+            throw e;
+        }
+    }
+
+    // Helper functions to trigger robustFetch
+    async function updateAnalytics() {
+        statsOutput.innerText = "Syncing Analytics... (Check console for retries/dedup)";
+        try {
+            const data = await robustFetch('/api/doc-stats');
+            statsOutput.innerText = `Words: ${data.wordCount} | Chars: ${data.charCount} | Last Update: ${new Date(data.lastUpdated).toLocaleTimeString()}`;
+            statsOutput.style.color = "green";
+        } catch (err) {
+            statsOutput.innerText = `Catastrophic Failure: No cached data available.`;
+            statsOutput.style.color = "red";
+        }
+    }
+
+    // Attach to fake "Components"
+    document.getElementById('fetch-stats-1').addEventListener('click', updateAnalytics);
+    document.getElementById('fetch-stats-2').addEventListener('click', updateAnalytics);
+
+    // 5. Native Browser Event Fallbacks
+    window.addEventListener('offline', () => { 
+        offlineBanner.style.display = 'block'; 
+        if (socket) {
+            console.log("Browser went offline. Disconnecting WebSocket.");
+            socket.disconnect(); // Forcefully sever the real-time connection
+        }
+    });
+
+    window.addEventListener('online', () => { 
+        offlineBanner.style.display = 'none'; 
+        updateAnalytics(); 
+        if (socket) {
+            console.log("Browser back online. Reconnecting WebSocket.");
+            socket.connect(); // Re-establish the real-time connection
+        }
+    });
+
+    if (!navigator.onLine) offlineBanner.style.display = 'block';
+    
+    // --- END FAULT-TOLERANT LAB ---
+
     // Globals
     let socket;
     
