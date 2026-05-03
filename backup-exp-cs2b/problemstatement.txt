@@ -1,0 +1,40 @@
+Problem Statement: User/Admin Login Portal
+
+Design and implement a basic authentication system for a web application that supports two roles: Admin and User. The system must enforce role-based access control, where admins have full privileges while users have restricted access.
+
+The objective is to understand authentication flow, session handling, and role-based authorization in a minimal full-stack or frontend-backend setup.
+
+Task 1: Authentication System (Core Login Module)
+
+Develop a login interface and backend logic to authenticate users.
+
+Requirements:
+
+Create a login form (username/email + password).
+Validate credentials against a predefined dataset (hardcoded or database).
+Identify role (admin or user) upon successful login.
+Implement basic session handling (token/session variable/local storage).
+Display appropriate error messages for invalid login attempts.
+
+Expected Outcome:
+
+Successful login redirects users based on role.
+Failed login attempts are handled gracefully.
+Task 2: Role-Based Access Control (Authorization Layer)
+
+Implement access restrictions based on user roles.
+
+Requirements:
+
+Create two dashboards:
+Admin Dashboard: Can view, add, edit, and delete user data.
+User Dashboard: Can only view their own profile/details.
+Restrict routes/pages so:
+Users cannot access admin functionalities.
+Unauthorized access attempts are blocked or redirected.
+Optionally include a logout mechanism.
+
+Expected Outcome:
+
+Clear separation of privileges between admin and user.
+Unauthorized actions are prevented at both UI and logic levels.

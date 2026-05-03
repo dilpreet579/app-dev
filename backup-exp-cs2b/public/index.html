@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Login Portal</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .dashboard {
+            padding: 20px;
+            border: 1px solid #ccc;
+            margin-top: 20px;
+            background: #f9f9f9;
+        }
+
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Login Form -->
+    <div id="loginSection">
+        <h2>System Login</h2>
+        <input type="text" id="username" placeholder="Username (admin or user1)"><br><br>
+        <input type="password" id="password" placeholder="Password"><br><br>
+        <button onclick="login()">Login</button>
+        <p id="errorMsg" class="error"></p>
+    </div>
+
+    <!-- Dashboards -->
+    <div id="dashboardSection" class="hidden dashboard">
+        <h2 id="dashTitle"></h2>
+
+        <div id="adminControls" class="hidden">
+            <h3>Manage Users</h3>
+            <input type="text" id="newUsername" placeholder="New Username">
+            <input type="password" id="newPassword" placeholder="Password">
+            <select id="newRole">
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+            </select>
+            <button onclick="addUser()">Add User</button>
+
+            <table border="1" style="margin-top: 15px; width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody"></tbody>
+            </table>
+        </div>
+
+        <div id="userControls" class="hidden">
+            <h3>Your Profile Details</h3>
+            <pre id="userProfile" style="background: #eee; padding: 10px;"></pre>
+        </div>
+
+        <br>
+        <button onclick="logout()">Logout</button>
+    </div>
+
+    <script>
+        // Task 1: Auth Flow
+        async function login() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: u, password: p })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                localStorage.setItem('token', data.token); // Save session
+                loadDashboard(data.role); // Task 2: Redirect based on role
+            } else {
+                document.getElementById('errorMsg').innerText = data.message;
+            }
+        }
+
+        // Task 2: Authorization & Data Loading
+        function loadDashboard(role) {
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.remove('hidden');
+            document.getElementById('dashTitle').innerText = role === 'admin' ? "Admin Dashboard" : "User Dashboard";
+
+            if (role === 'admin') {
+                document.getElementById('adminControls').classList.remove('hidden');
+                fetchUsers();
+            } else {
+                document.getElementById('userControls').classList.remove('hidden');
+                fetchProfile();
+            }
+        }
+
+        // Admin Functionalities
+        async function fetchUsers() {
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/admin/users', { headers: { 'Authorization': `Bearer ${token}` } });
+            if (res.ok) {
+                const users = await res.json();
+                const tbody = document.getElementById('usersTableBody');
+                tbody.innerHTML = users.map(u => `
+                    <tr>
+                        <td>${u.id}</td>
+                        <td>${u.username}</td>
+                        <td>${u.role}</td>
+                        <td><button onclick="deleteUser(${u.id})">Delete</button></td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        async function addUser() {
+            const token = localStorage.getItem('token');
+            const username = document.getElementById('newUsername').value;
+            const password = document.getElementById('newPassword').value;
+            const role = document.getElementById('newRole').value;
+
+            await fetch('/api/admin/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ username, password, role })
+            });
+            fetchUsers(); // Refresh table
+        }
+
+        async function deleteUser(id) {
+            const token = localStorage.getItem('token');
+            await fetch(`/api/admin/users/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            fetchUsers(); // Refresh table
+        }
+
+        // User Functionalities
+        async function fetchProfile() {
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/user/profile', { headers: { 'Authorization': `Bearer ${token}` } });
+            if (res.ok) {
+                const profile = await res.json();
+                document.getElementById('userProfile').innerText = JSON.stringify(profile, null, 2);
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.reload();
+        }
+    </script>
+</body>
+
+</html>
