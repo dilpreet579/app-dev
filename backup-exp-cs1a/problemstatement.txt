@@ -1,0 +1,2 @@
+Problem: Implement a basic secure backend module for handling sensitive user data (e.g., a mini banking/healthcare system) using any programming language or framework (Node.js / Python / Java).Implement password hashing using a secure algorithm (e.g., bcrypt / SHA-256 with salt).
+Task : 1. Store user credentials securely (no plain text passwords).2. Create one secure API endpoint (e.g., /login or /register).
